@@ -1,2 +1,2 @@
 # SimpleMemo
-For those who want to remember everything
+A simple application for remembering everything
