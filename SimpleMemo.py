@@ -2,13 +2,17 @@ import json
 import time
 from operator import itemgetter
 
+title = None
+data = None
+fields = []
 
-def import_memo():
+
+def import_data():
     with open('data.json') as f:
         return json.load(f)
 
 
-def export_memo(data):
+def export_data(data):
     with open('data.json', 'w') as f:
         json.dump(data, f, indent=2)
 
@@ -44,81 +48,192 @@ def get_time_interval(repetition_done, ef):
         return get_time_interval(repetition_done - 1, ef) * ef
 
 
-def new_entry(data, option):
-    new_item = dict()
-    new_item['created'] = time.time()
-    new_item['time_left'] = 0
-    new_item['e-factor'] = 2.5
-    new_item['repetition_done'] = 0
-    if option == 1:
-        new_item['event'] = input('Please describe the event\n>>> ')
-    if option == 2:
-        new_item['question'] = input('Please enter the question\n>>> ')
-        new_item['answer'] = input('Please enter the correct answer\n>>> ')
-    data += [new_item]
-    export_memo(data)
+def card_title(*args):
+    global title, data
+    if title is None:
+        title = input('Enter the title of the card(mandatory)\n>>> ')
+        data = import_data()
+        if title in data['cards']:
+            print('This title already exists.\n')
+            title = None
+            card_title()
+        else:
+            print('Every card has a default field named "prompt".')
+    else:
+        print('You have already entered the card title')
 
 
-def reminder(data):
+def add_field(*args):
+    global fields
+    card_title()
+    fields += [(input('Enter the new field\n>>> '))]
+
+
+def delete_field(*args):
+    global fields
+    card_title()
+    if len(fields) > 0:
+        for i in range(len(fields)):
+            print(str(i + 1) + '. ' + fields[i])
+        del fields[int(input('Enter the field to delete\n>>> ')) - 1]
+    else:
+        print('Nothing to delete.')
+
+
+def save_card(*args):
+    global data, title, fields
+    if title != None:
+        data['cards'][title] = list(set(fields))
+        data['memos'][title] = []
+        export_data(data)
+    title = None
+    call_function(menu)
+
+def show_cards(*args):
+    global data
+    data=import_data()
+    i=1
+    for k in data['cards'].keys():
+        fields=''
+        for field in data['cards'][k]:
+            fields+=field+', '
+        print(str(i)+'. Card Title: '+k+'\n '+' '*len(str(i))+'  Fields: prompt, '+fields+'\n')
+
+def delete_card(*args):
+    global data
+    data = import_data()
+    card_types = list(data['cards'].keys())
+    if len(card_types) > 0:
+        for i in range(len(card_types)):
+            print(str(i + 1) + '. ' + card_types[i])
+        chosen_type = int(input('Please chose a card type\n>>> ')) - 1
+        del data['cards'][card_types[chosen_type]]
+        export_data(data)
+        data = import_data()
+    else:
+        print('Nothing to delete.')
+
+
+def create_memo(*args):
+    global data
+    data = import_data()
+    cards = list(data['cards'].keys())
+    if len(cards)>0:
+        for i in range(len(cards)):
+            print(str(i + 1) + '. ' + cards[i])
+        chosen_card = int(input('Please chose a card\n>>> ')) - 1
+        title = cards[chosen_card]
+        new_memo = dict()
+        new_memo['created'] = time.time()
+        new_memo['time_left'] = 0
+        new_memo['e-factor'] = 2.5
+        new_memo['repetition_done'] = 0
+        new_memo['prompt'] = input('Please describe what is to be prompted\n>>> ')
+        if len(data['cards'][title])>0:
+            new_memo['custom'] = dict()
+            for field in data['cards'][title]:
+                new_memo['custom'][field] = input('Please write the ' + field + '\n>>> ')
+        data['memos'][title] += [new_memo]
+        export_data(data)
+        data = import_data()
+    else:
+        print("There is no card. Please create a card first.")
+
+def delete_memo(option):
+    option1, option2 = 4,5
+    global data
+    data = import_data()
+    memo_types = list(data['memos'].keys())
+    if len(memo_types) > 0:
+        for i in range(len(memo_types)):
+            print(str(i + 1) + '. ' + memo_types[i])
+        chosen_type = int(input('Please chose a type\n>>> ')) - 1
+        if option == option1:
+            memos = data['memos'][memo_types[chosen_type]]
+            if len(memos) > 0:
+                for i in range(len(memos)):
+                    print(str(i + 1) + '. ' + memos[i]['prompt'])
+                chosen_memo = int(input('Please chose a memo\n>>> ')) - 1
+                del memos[chosen_memo]
+                export_data(data)
+                data = import_data()
+            else:
+                print('Nothing to delete.')
+        elif option == option2:
+            del data['memos'][memo_types[chosen_type]]
+            export_data(data)
+            data = import_data()
+    else:
+        print('Nothing to delete.')
+
+
+def reminder(*args):
+    global data
+    data = import_data()
+
+    memo_types = list(data['memos'].keys())
+    for i in range(len(memo_types)):
+        print(str(i + 1) + '. ' + memo_types[i])
+    chosen_type = int(input('Please chose a type\n>>> ')) - 1
+    memos = data['memos'][memo_types[chosen_type]]
     rem = ''
-    i = 0
-    for i in range(len(data)):
-        D=data[i]
+    for i in range(len(memos)):
+        D = memos[i]
         D['time_left'] = get_time_interval(D['repetition_done'], D['e-factor']) - time.time() + D['created']
-        if D['time_left'] >= 5184000: #deleted after 2 months
+        if D['time_left'] >= 5184000:  # deleted after 2 months
             with open('deleted.txt', 'a') as f:
-                f.write(str(D)+'\n')
-            del data[i]
-    data.sort(key=itemgetter('time_left'))
-    for D in data:
+                f.write(str(D) + '\n')
+            del memos[i]
+    memos.sort(key=itemgetter('time_left'))
+    i=0
+    for D in memos:
         if D['time_left'] <= 0:
-            if 'event' in D.keys():
-                rem += str(i) + '. [event] ' + D['event'] + '\n'
-            elif 'question' in D.keys():
-                rem += str(i) + '. [question] ' + D['question'] + '\n'
+            rem += str(i + 1) + '. ' + D['prompt'] + '\n'
         else:
             break
         i += 1
     if rem:
         print('Select any one to memorize:\n' + rem)
-        response = int(input('\nSelect an item to memorize\n>>> '))
-        if 'question' in data[response].keys():
-            print('Correct answer: ' + data[response]['answer'])
-        update_ef(data[response], get_quality_of_response())
-        data[response]['repetition_done'] += 1
+        response = int(input('Select an item to memorize\n>>> ')) - 1
+        if 'custom' in memos[response]:
+            headings = memos[response]['custom']
+            print('Please recall the fields: ', end='')
+            for heading in headings:
+                print(heading, end=', ')
+            input()
+            for heading in headings:
+                print('\nCorrect ' + heading + ': ' + headings[heading])
+        update_ef(memos[response], get_quality_of_response())
+        memos[response]['repetition_done'] += 1
     else:
         print('Nothing to memorize.')
-    export_memo(data)
-
-def print_menu():
-    prompt = '\nSimple Memo Menu\n' + \
-             '=================\n' + \
-             '\t1 - new event\n' + \
-             '\t2 - new question\n' + \
-             '\t3 - reminder\n' \
-             '\t4 - print data\n' + \
-             '\t0 - exit\n\n' + \
-             '>>> '
-    response = int(input(prompt))
-    return response
+    export_data(data)
 
 
-def main():
-    flag = True
-    while flag:
-        response = print_menu()
-        data = import_memo()
-        if response == 1:
-            new_entry(data, response)
-        elif response == 2:
-            new_entry(data, response)
-        elif response == 3:
-            reminder(data)
-        elif response == 4:
-            print(json.dumps(import_memo(),indent=2))
-        elif response == 0:
-            flag = False
+def call_function(menu):
+    print('==============================')
+    for i in range(len(menu)):
+        print(str(i + 1) + '. ' + menu[i][0])
+    print('==============================')
+    response = int(input('>>> ')) - 1
+    if type(menu[response][1]) == tuple:
+        call_function(menu[response][1])
+    else:
+        menu[response][1](response)
+        call_function(menu)
 
+
+menu = (('create a memo', create_memo),
+        ('reminder', reminder),
+        ('create a new card', (('enter the card title', card_title),
+                               ('add a new field', add_field),
+                               ('delete a field', delete_field),
+                               ('save', save_card))),
+        ('show all cards',show_cards),
+        ('delete a memo', delete_memo),
+        ('delete all memos of a type', delete_memo),
+        ('delete a card', delete_card),
+        ('exit', exit))
 
 if __name__ == "__main__":
-    main()
+    call_function(menu)
