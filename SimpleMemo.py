@@ -41,9 +41,9 @@ def update_ef(item, q):
 
 def get_time_interval(repetition_done, ef):
     if repetition_done == 0:
-        return 100 #86400  # 1 days
+        return 86400  # 1 days
     elif repetition_done == 1:
-        return 500 #518400  # 6 days
+        return 518400  # 6 days
     else:
         return get_time_interval(repetition_done - 1, ef) * ef
 
