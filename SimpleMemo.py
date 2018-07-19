@@ -41,9 +41,9 @@ def update_ef(item, q):
 
 def get_time_interval(repetition_done, ef):
     if repetition_done == 0:
-        return 86400  # 1 days
+        return 100 #86400  # 1 days
     elif repetition_done == 1:
-        return 518400  # 6 days
+        return 500 #518400  # 6 days
     else:
         return get_time_interval(repetition_done - 1, ef) * ef
 
@@ -59,8 +59,6 @@ def card_title(*args):
             card_title()
         else:
             print('Every card has a default field named "prompt".')
-    else:
-        print('You have already entered the card title')
 
 
 def add_field(*args):
@@ -89,15 +87,17 @@ def save_card(*args):
     title = None
     call_function(menu)
 
+
 def show_cards(*args):
     global data
-    data=import_data()
-    i=1
+    data = import_data()
+    i = 1
     for k in data['cards'].keys():
-        fields=''
+        fields = ''
         for field in data['cards'][k]:
-            fields+=field+', '
-        print(str(i)+'. Card Title: '+k+'\n '+' '*len(str(i))+'  Fields: prompt, '+fields+'\n')
+            fields += field + ', '
+        print(str(i) + '. Card Title: ' + k + '\n ' + ' ' * len(str(i)) + '  Fields: prompt, ' + fields + '\n')
+
 
 def delete_card(*args):
     global data
@@ -118,18 +118,18 @@ def create_memo(*args):
     global data
     data = import_data()
     cards = list(data['cards'].keys())
-    if len(cards)>0:
+    if len(cards) > 0:
         for i in range(len(cards)):
             print(str(i + 1) + '. ' + cards[i])
         chosen_card = int(input('Please chose a card\n>>> ')) - 1
         title = cards[chosen_card]
         new_memo = dict()
-        new_memo['created'] = time.time()
+        new_memo['last_used'] = time.time()
         new_memo['time_left'] = 0
         new_memo['e-factor'] = 2.5
         new_memo['repetition_done'] = 0
         new_memo['prompt'] = input('Please describe what is to be prompted\n>>> ')
-        if len(data['cards'][title])>0:
+        if len(data['cards'][title]) > 0:
             new_memo['custom'] = dict()
             for field in data['cards'][title]:
                 new_memo['custom'][field] = input('Please write the ' + field + '\n>>> ')
@@ -139,8 +139,9 @@ def create_memo(*args):
     else:
         print("There is no card. Please create a card first.")
 
+
 def delete_memo(option):
-    option1, option2 = 4,5
+    option1, option2 = 4, 5
     global data
     data = import_data()
     memo_types = list(data['memos'].keys())
@@ -179,13 +180,13 @@ def reminder(*args):
     rem = ''
     for i in range(len(memos)):
         D = memos[i]
-        D['time_left'] = get_time_interval(D['repetition_done'], D['e-factor']) - time.time() + D['created']
+        D['time_left'] = get_time_interval(D['repetition_done'], D['e-factor']) - time.time() + D['last_used']
         if D['time_left'] >= 5184000:  # deleted after 2 months
             with open('deleted.txt', 'a') as f:
                 f.write(str(D) + '\n')
             del memos[i]
     memos.sort(key=itemgetter('time_left'))
-    i=0
+    i = 0
     for D in memos:
         if D['time_left'] <= 0:
             rem += str(i + 1) + '. ' + D['prompt'] + '\n'
@@ -203,8 +204,10 @@ def reminder(*args):
             input()
             for heading in headings:
                 print('\nCorrect ' + heading + ': ' + headings[heading])
+
         update_ef(memos[response], get_quality_of_response())
         memos[response]['repetition_done'] += 1
+        memos[response]['last_used']=time.time()
     else:
         print('Nothing to memorize.')
     export_data(data)
@@ -229,7 +232,7 @@ menu = (('create a memo', create_memo),
                                ('add a new field', add_field),
                                ('delete a field', delete_field),
                                ('save', save_card))),
-        ('show all cards',show_cards),
+        ('show all cards', show_cards),
         ('delete a memo', delete_memo),
         ('delete all memos of a type', delete_memo),
         ('delete a card', delete_card),
