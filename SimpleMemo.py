@@ -7,7 +7,7 @@ title = None
 data = None
 fields = []
 smdir = sys.argv[0][:-13]
-
+last_time=0
 
 def import_data():
     with open(smdir + 'data.json') as f:
@@ -171,23 +171,27 @@ def delete_memo(option):
 
 
 def reminder(*args):
-    global data
+    global data, last_time
     data = import_data()
 
     memo_types = list(data['memos'].keys())
     for i in range(len(memo_types)):
         print(str(i + 1) + '. ' + memo_types[i])
     chosen_type = int(input('Please chose a type\n>>> ')) - 1
-    memos = data['memos'][memo_types[chosen_type]]
+    memo_type=memo_types[chosen_type]
+    memos = data['memos'][memo_type]
     rem = ''
     for i in range(len(memos)):
         D = memos[i]
         D['time_left'] = get_time_interval(D['repetition_done'], D['e-factor']) - time.time() + D['last_used']
-        if D['time_left'] >= 5184000:  # deleted after 2 months
-            with open('deleted.txt', 'a') as f:
-                f.write(str(D) + '\n')
+        if D['time_left'] >= 7776000:  # deleted after 2 months
+            with open(smdir+'deleted/'+memo_type+'.txt', 'a') as f:
+                text='{\nprompt: '+D['prompt']+'\n'+\
+                     '\n'.join([s+': '+D['custom'][s] for s in D['custom']])+'\n}\n'
+                f.write(text)
             del memos[i]
-    memos.sort(key=itemgetter('time_left'))
+    if time.time() - last_time > 3600:
+        memos.sort(key=itemgetter('time_left'))
     i = 0
     for D in memos:
         if D['time_left'] <= 0:
