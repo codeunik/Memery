@@ -1,19 +1,21 @@
 import json
 import time
+import sys
 from operator import itemgetter
 
 title = None
 data = None
 fields = []
+smdir = sys.argv[0][:-13]
 
 
 def import_data():
-    with open('data.json') as f:
+    with open(smdir + 'data.json') as f:
         return json.load(f)
 
 
 def export_data(data):
-    with open('data.json', 'w') as f:
+    with open(smdir + 'data.json', 'w') as f:
         json.dump(data, f, indent=2)
 
 
@@ -207,7 +209,7 @@ def reminder(*args):
 
         update_ef(memos[response], get_quality_of_response())
         memos[response]['repetition_done'] += 1
-        memos[response]['last_used']=time.time()
+        memos[response]['last_used'] = time.time()
     else:
         print('Nothing to memorize.')
     export_data(data)
