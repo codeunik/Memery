@@ -2,12 +2,14 @@ import json
 import time
 import sys
 from operator import itemgetter
+import readline
 
 title = None
 data = None
 fields = []
 smdir = sys.argv[0][:-13]
-last_time=0
+last_time = 0
+
 
 def import_data():
     with open(smdir + 'data.json') as f:
@@ -38,7 +40,7 @@ def update_ef(item, q):
     if q >= 3:
         item['e-factor'] = item['e-factor'] + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
     else:
-        item['repetition_done'] = 0
+        item['repetition_done'] = -1
 
 
 def get_time_interval(repetition_done, ef):
@@ -101,6 +103,25 @@ def show_cards(*args):
         print(str(i) + '. Card Title: ' + k + '\n ' + ' ' * len(str(i)) + '  Fields: prompt, ' + fields + '\n')
 
 
+def save_memos(*args):
+    global data
+    data = import_data()
+    memo_types = list(data['memos'].keys())
+    if len(memo_types) > 0:
+        for i in range(len(memo_types)):
+            print(str(i + 1) + '. ' + memo_types[i])
+        chosen_type = int(input('Please chose a type\n>>> ')) - 1
+        memo_type = memo_types[chosen_type]
+        memos = data['memos'][memo_type]
+        memos.sort(key=itemgetter('created'))
+        with open(smdir + 'saved/' + memo_type + '.txt', 'w') as f:
+            text = ''
+            for D in memos:
+                text = text + '{\nprompt: ' + D['prompt'] + '\n' + \
+                       '\n'.join([s + ': ' + D['custom'][s] for s in D['custom']]) + '\n}\n'
+            f.write(text)
+
+
 def delete_card(*args):
     global data
     data = import_data()
@@ -114,6 +135,7 @@ def delete_card(*args):
         data = import_data()
     else:
         print('Nothing to delete.')
+    call_function(menu)
 
 
 def create_memo(*args):
@@ -126,6 +148,7 @@ def create_memo(*args):
         chosen_card = int(input('Please chose a card\n>>> ')) - 1
         title = cards[chosen_card]
         new_memo = dict()
+        new_memo['created'] = time.time()
         new_memo['last_used'] = time.time()
         new_memo['time_left'] = 0
         new_memo['e-factor'] = 2.5
@@ -143,7 +166,7 @@ def create_memo(*args):
 
 
 def delete_memo(option):
-    option1, option2 = 4, 5
+    option1, option2 = 0, 1
     global data
     data = import_data()
     memo_types = list(data['memos'].keys())
@@ -168,6 +191,7 @@ def delete_memo(option):
             data = import_data()
     else:
         print('Nothing to delete.')
+    call_function(menu)
 
 
 def reminder(*args):
@@ -178,16 +202,16 @@ def reminder(*args):
     for i in range(len(memo_types)):
         print(str(i + 1) + '. ' + memo_types[i])
     chosen_type = int(input('Please chose a type\n>>> ')) - 1
-    memo_type=memo_types[chosen_type]
+    memo_type = memo_types[chosen_type]
     memos = data['memos'][memo_type]
     rem = ''
     for i in range(len(memos)):
         D = memos[i]
         D['time_left'] = get_time_interval(D['repetition_done'], D['e-factor']) - time.time() + D['last_used']
-        if D['time_left'] >= 7776000:  # deleted after 2 months
-            with open(smdir+'deleted/'+memo_type+'.txt', 'a') as f:
-                text='{\nprompt: '+D['prompt']+'\n'+\
-                     '\n'.join([s+': '+D['custom'][s] for s in D['custom']])+'\n}\n'
+        if D['time_left'] >= 5184000:  # deleted after 2 months
+            with open(smdir + 'deleted/' + memo_type + '.txt', 'a') as f:
+                text = '{\nprompt: ' + D['prompt'] + '\n' + \
+                       '\n'.join([s + ': ' + D['custom'][s] for s in D['custom']]) + '\n}\n'
                 f.write(text)
             del memos[i]
     if time.time() - last_time > 3600:
@@ -239,9 +263,10 @@ menu = (('create a memo', create_memo),
                                ('delete a field', delete_field),
                                ('save', save_card))),
         ('show all cards', show_cards),
-        ('delete a memo', delete_memo),
-        ('delete all memos of a type', delete_memo),
-        ('delete a card', delete_card),
+        ('save memos', save_memos),
+        ('delete', (('delete a memo', delete_memo),
+                    ('delete all memos of a type', delete_memo),
+                    ('delete a card', delete_card))),
         ('exit', exit))
 
 if __name__ == "__main__":
