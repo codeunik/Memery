@@ -154,13 +154,25 @@ def create_memo(*args):
         new_memo['e-factor'] = 2.5
         new_memo['repetition_done'] = 0
         new_memo['prompt'] = input('Please describe what is to be prompted\n>>> ')
-        if len(data['cards'][title]) > 0:
-            new_memo['custom'] = dict()
-            for field in data['cards'][title]:
-                new_memo['custom'][field] = input('Please write the ' + field + '\n>>> ')
-        data['memos'][title] += [new_memo]
-        export_data(data)
-        data = import_data()
+        response='y'
+        for item in data['memos'][title]:
+            if item['prompt'] == new_memo['prompt']:
+                print('This memo is already exists.')
+                if 'custom' in item:
+                    headings = item['custom']
+                    for heading in headings:
+                        print('\n ' + heading + ': ' + headings[heading])
+                response=input('Do you still want to add this? [Y/n]')
+        if response != 'y':
+            pass
+        else:
+            if len(data['cards'][title]) > 0:
+                new_memo['custom'] = dict()
+                for field in data['cards'][title]:
+                    new_memo['custom'][field] = input('Please write the ' + field + '\n>>> ')
+            data['memos'][title] += [new_memo]
+            export_data(data)
+            data = import_data()
     else:
         print("There is no card. Please create a card first.")
 
@@ -231,6 +243,7 @@ def reminder(*args):
             print('Please recall the fields: ', end='')
             for heading in headings:
                 print(heading, end=', ')
+            print('for ' + memos[response]['prompt'], end='.')
             input()
             for heading in headings:
                 print('\nCorrect ' + heading + ': ' + headings[heading])
