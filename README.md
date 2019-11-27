@@ -1,2 +1,2 @@
-# SimpleMemo
-A simple application for remembering everything
+# Memery
+A simple CLI application for remembering everything
